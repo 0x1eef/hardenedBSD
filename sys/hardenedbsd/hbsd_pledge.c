@@ -71,16 +71,14 @@ SDT_PROBE_DEFINE5(pledge, kern, kern_pledge, masks,
  * reference: man 9 SDT
  * The arguments are (in this order):
  * - pid
- * - fsid
- * - inode
  * - syscall number
  * - the current pledge mask possessed by thread
  * - the violated mask.
  * - the used mask
  * - TODO we should add additional fields like zfs txgid
  */
-SDT_PROBE_DEFINE7(pledge, learning, insert, masks,
-    "pid_t", "uint64_t", "ino_t", "int", "uint64_t", "uint64_t", "uint64_t");
+SDT_PROBE_DEFINE5(pledge, learning, insert, masks,
+    "pid_t", "int", "uint64_t", "uint64_t", "uint64_t");
 
 /*
  * Global exported symbols
@@ -425,8 +423,8 @@ pledge_learning_insert(const struct thread*thread,
     const dev_t fsid, const ino_t inode,
     const uint64_t used_mask, const uint64_t violated_mask){
 
-	SDT_PROBE7(pledge, learning, insert, masks,
-	   thread->td_proc->p_pid, fsid, inode, thread->td_sa.code,
+	SDT_PROBE5(pledge, learning, insert, masks,
+	   thread->td_proc->p_pid, thread->td_sa.code,
 	    thread->td_pledge, violated_mask, used_mask);
 
 	/* Skip if learning mode is disabled: */
@@ -996,9 +994,13 @@ uint64_t pledge_permission_map[SYS_MAXSYSCALL] = {
 	[SYS_chroot]	= PLEDGE_STDIO,
 	[SYS_msync]	= PLEDGE_STDIO,
 	[SYS_vfork]	= PLEDGE_PROC,
+#ifdef SYS_sbrk
 	[SYS_sbrk]	= PLEDGE_STDIO,
+#endif
+#ifdef SYS_sstk
 	/* 70: */
 	[SYS_sstk]	= PLEDGE_STDIO,
+#endif
 #ifndef SYS_vadvise
 #define SYS_vadvise SYS_freebsd11_vadvise
 #endif
@@ -1007,9 +1009,7 @@ uint64_t pledge_permission_map[SYS_MAXSYSCALL] = {
 	[SYS_mprotect]	= PLEDGE_STDIO,
 	[SYS_madvise]	= PLEDGE_STDIO,
 	[SYS_mincore]	= PLEDGE_STDIO,
-	[SYS_getgroups]	= PLEDGE_STDIO,
 	/* 80: */
-	[SYS_setgroups]	= PLEDGE_ID,
 	[SYS_getpgrp]		= PLEDGE_STDIO,
 	[SYS_setpgid]		= PLEDGE_STDIO,
 	[SYS_setitimer]	= PLEDGE_STDIO,
@@ -1344,7 +1344,9 @@ uint64_t pledge_permission_map[SYS_MAXSYSCALL] = {
 	[SYS_symlinkat]	= PLEDGE_CPATH,
 	[SYS_unlinkat]	= PLEDGE_CPATH,
 	[SYS_posix_openpt]	= PLEDGE_STDIO, // TODO pledge_TTY ?
+#ifdef SYS_gssd_syscall
 	[SYS_gssd_syscall]	= PLEDGE_STDIO, /* TODO */
+#endif
 	[SYS_jail_get]	= PLEDGE_PROC, // TODO consider pledge flag for this
 	[SYS_jail_set]	= PLEDGE_PROC,
 	[SYS_jail_remove]	= PLEDGE_PROC,
@@ -1490,8 +1492,69 @@ uint64_t pledge_permission_map[SYS_MAXSYSCALL] = {
 #ifdef SYS_swapoff
 	[SYS_swapoff] = PLEDGE_KLD, /* 582 */
 #endif
+#ifdef SYS_kqueuex
+	[SYS_kqueuex] = PLEDGE_NONE, /* 583 */
+#endif
+#ifdef SYS_membarrier
+	[SYS_membarrier] = PLEDGE_NONE, /* 584 */
+#endif
+#ifdef SYS_timerfd_create
+	[SYS_timerfd_create] = PLEDGE_NONE, /* 585 */
+#endif
+#ifdef SYS_timerfd_gettime
+	[SYS_timerfd_gettime] = PLEDGE_NONE, /* 586 */
+#endif
+#ifdef SYS_timerfd_settime
+	[SYS_timerfd_settime] = PLEDGE_NONE, /* 587 */
+#endif
+#ifdef SYS_kcmp
+	[SYS_kcmp] = PLEDGE_NONE, /* 588 */
+#endif
+#ifdef SYS_getrlimitusage
+	[SYS_getrlimitusage] = PLEDGE_NONE, /* 589 */
+#endif
+#ifdef SYS_fchroot
+	[SYS_fchroot] = PLEDGE_NONE, /* 590 */
+#endif
+#ifdef SYS_setcred
+	[SYS_setcred] = PLEDGE_NONE, /* 591 */
+#endif
+#ifdef SYS_exterrctl
+	[SYS_exterrctl] = PLEDGE_NONE, /* 592 */
+#endif
+#ifdef SYS_inotify_add_watch_at
+	[SYS_inotify_add_watch_at] = PLEDGE_NONE, /* 593 */
+#endif
+#ifdef SYS_inotify_rm_watch
+	[SYS_inotify_rm_watch] = PLEDGE_NONE, /* 594 */
+#endif
+#ifdef SYS_getgroups
+	[SYS_getgroups] = PLEDGE_STDIO, /* 595 */
+#endif
+#ifdef SYS_setgroups
+	[SYS_setgroups] = PLEDGE_ID, /* 596 */
+#endif
+#ifdef SYS_jail_attach_jd
+	[SYS_jail_attach_jd] = PLEDGE_NONE, /* 597 */
+#endif
+#ifdef SYS_jail_remove_jd
+	[SYS_jail_remove_jd] = PLEDGE_NONE, /* 598 */
+#endif
+#ifdef SYS_kexec_load
+	[SYS_kexec_load] = PLEDGE_NONE, /* 599 */
+#endif
+#ifdef SYS_pdrfork
+	[SYS_pdrfork] = PLEDGE_NONE, /* 600 */
+#endif
+#ifdef SYS_pdwait
+	[SYS_pdwait] = PLEDGE_NONE, /* 601 */
+#endif
+#ifdef SYS_renameat2
+	[SYS_renameat2] = PLEDGE_NONE, /* 602 */
+#endif
 };
-_Static_assert(583 == SYS_MAXSYSCALL, "new syscalls added to sys/sys/syscall.h, hbsd_pledge.c needs to be updated. TODO would it make sense to remove this static assertion and instead display a helpful message on boot + allow the operator to declare/override the defaults via tunables to prevent situations where people can't boot after upgrading?");
+_Static_assert(603 == SYS_MAXSYSCALL, "new syscalls added to sys/sys/syscall.h, hbsd_pledge.c needs to be updated. TODO would it make sense to remove this static assertion and instead display a helpful message on boot + allow the operator to declare/override the defaults via tunables to prevent situations where people can't boot after upgrading?");
+
 /*
  * Hook used to determine whether a given syscall should be called or not.
  * Main caller is sys/kern/subr_syscall.c:syscallenter
