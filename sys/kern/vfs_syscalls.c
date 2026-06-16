@@ -1248,7 +1248,7 @@ openatfp(struct thread *td, int dirfd, const char *path,
 	pdp = p->p_pd;
 
 #ifdef HBSD_PLEDGE
-	error = pledge_openat(td, fd, path, flags, mode);
+	error = pledge_openat(td, dirfd, path, flags, mode);
 	if (error != 0)
 		return (error);
 #endif
